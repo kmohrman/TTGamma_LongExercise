@@ -612,13 +612,12 @@ class TTGammaProcessor(processor.ProcessorABC):
                 print("WARNING : Using TTGamma_SingleLept_2016 pileup distribution instead of {}".format(datasetFull))
                 datasetFull = "TTGamma_SingleLept_2016"
 
-            """
-            puWeight = 
-            puWeight_Up = ?
-            puWeight_Down = ?
+            puWeight = puLookup[datasetFull](events.Pileup.nTrueInt)
+            puWeight_Up = puLookup_Up[datasetFull](events.Pileup.nTrueInt)
+            puWeight_Down = puLookup_Down[datasetFull](events.Pileup.nTrueInt)
 
             # add the puWeight and it's uncertainties to the weights container
-            weights.add('puWeight',weight=?, weightUp=?, weightDown=?)
+            weights.add('puWeight',weight=puWeight, weightUp=puWeight_Up, weightDown=puWeight_Down)
 
             #btag key name
             #name / working Point / type / systematic / jetType
@@ -662,8 +661,7 @@ class TTGammaProcessor(processor.ProcessorABC):
 
             # 4. SYSTEMATICS
             # add electron efficiency weights to the weight container
-            weights.add('eleEffWeight',weight=?,weightUp=?,weightDown=?)
-
+            weights.add('eleEffWeight',weight=eleSF,weightUp=eleSF_up,weightDown=eleSF_down)
         
             muID = self.mu_id_sf(tightMuon.eta, tightMuon.pt)
             muIDerr = self.mu_id_err(tightMuon.eta, tightMuon.pt)
@@ -678,8 +676,7 @@ class TTGammaProcessor(processor.ProcessorABC):
 
             # 4. SYSTEMATICS
             # add muon efficiency weights to the weight container
-            weights.add('muEffWeight',weight=?,weightUp=?, weightDown=?)
-
+            weights.add('muEffWeight',weight=muSF,weightUp=muSF_up, weightDown=muSF_down)
 
             #in some samples, generator systematics are not available, in those case the systematic weights of 1. are used
             if ak.mean(ak.num(events.PSWeight))==1:
@@ -718,7 +715,6 @@ class TTGammaProcessor(processor.ProcessorABC):
 
                 weights.add('ISR',weight=np.ones(len(events)), weightUp=psWeights[:,2], weightDown=psWeights[:,0])
                 weights.add('FSR',weight=np.ones(len(events)), weightUp=psWeights[:,3], weightDown=psWeights[:,1])
-            """
 
         ###################
         # FILL HISTOGRAMS

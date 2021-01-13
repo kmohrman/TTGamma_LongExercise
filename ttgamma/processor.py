@@ -184,6 +184,7 @@ class TTGammaProcessor(processor.ProcessorABC):
             overlapEta = 2.6
             overlapDR = 0.05
 
+        print("doOverlapRemoval",doOverlapRemoval)
             
         if doOverlapRemoval:
             genmotherIdx = events.GenPart.genPartIdxMother
@@ -216,7 +217,7 @@ class TTGammaProcessor(processor.ProcessorABC):
         else:
             passOverlapRemoval = np.ones_like(len(events))==1
             
-        """
+        #"""
         ##################
         # OBJECT SELECTION
         ##################
@@ -226,10 +227,10 @@ class TTGammaProcessor(processor.ProcessorABC):
 
         #select tight muons
         # tight muons should have a pt of at least 30 GeV, |eta| < 2.4, pass the tight muon ID cut (tightID variable), and have a relative isolation of less than 0.15
-        muonSelectTight = ((?) & 
-                           (?) & 
-                           (?) & 
-                           (?)
+        muonSelectTight = ((events.Muon.pt >= 30) & 
+                           (abs(events.Muon.eta < 2.4)) & 
+                           (events.Muon.tightId) & 
+                           (events.Muon.pfRelIso04_all < 0.15)
                           )
 
         #select loose muons        
@@ -254,12 +255,12 @@ class TTGammaProcessor(processor.ProcessorABC):
         # 1. ADD SELECTION
         #select tight electrons
         # tight electrons should have a pt of at least 35 GeV, |eta| < 2.1, pass the cut based electron id (cutBased variable in NanoAOD>=4), and pass the etaGap, D0, and DZ cuts defined above
-        electronSelectTight = ((?) & 
-                               (?) & 
-                               ? &      
-                               (?) &
-                               ? &
-                               ? &
+        electronSelectTight = ((events.Electron.pt >= 35) & 
+                               (abs(events.Electron.eta) < 2.1) & 
+                               (events.Electron.cutBased >= 4) &
+                               eleEtaGap &
+                               elePassDXY &
+                               elePassDZ
                               )
 
         #select loose electrons
@@ -275,14 +276,15 @@ class TTGammaProcessor(processor.ProcessorABC):
         # 1. ADD SELECTION
         #  Object selection
         #select the subset of muons passing the muonSelectTight and muonSelectLoose cuts
-        tightMuon = ?
-        looseMuon = ?
+        tightMuon = events.Muon[muonSelectTight]
+        looseMuon = events.Muon[muonSelectLoose]
 
         # 1. ADD SELECTION
         #  Object selection
         #select the subset of electrons passing the electronSelectTight and electronSelectLoose cuts
-        tightElectron = ?
-        looseElectron = ?
+        tightElectron = events.Electron[electronSelectTight]
+        looseElectron = events.Electron[electronSelectLoose]
+
 
         #### Calculate deltaR between photon and nearest lepton 
         # Remove photons that are within 0.4 of a lepton
@@ -326,11 +328,10 @@ class TTGammaProcessor(processor.ProcessorABC):
         # 1. ADD SELECTION
         #  Object selection
         #select tightPhoton, the subset of photons passing the photonSelect cut and the photonID cut        
-        tightPhoton = ?
+        tightPhoton = events.Photon[photonSelect & photonID]
         #select loosePhoton, the subset of photons passing the photonSelect cut and all photonID cuts without the charged hadron isolation cut applied (photonID_NoChIso)
-        loosePhoton = ?
+        loosePhoton = events.Photon[photonSelect & photonID_NoChIso]
         
-
         ####
         #update jet kinematics based on jet energy corrections
         jets = events.Jet
@@ -355,7 +356,6 @@ class TTGammaProcessor(processor.ProcessorABC):
             elif(self.jetSyst == 'JESDown'):
                 jets = corrected_jets.JES_jes.down
         
-
         ##check dR jet,lepton & jet,photon
         jetMu, jetMuDR = jets.nearest(tightMuon, return_metric=True)
         jetMuMask = ak.fill_none(jetMuDR > 0.4, True)
@@ -372,55 +372,60 @@ class TTGammaProcessor(processor.ProcessorABC):
         ##medium jet ID cut
         jetIDbit = 1
 
-        jetSelectNoPt = ((?) &
-                         ((jets.jetId >> jetIDbit & 1)==1) &
-                         ? & ? & ? )
+        jetSelectNoPt = (
+                        (jets.pt >= 30) &
+                        (jets.eta < 2.4) &
+                        ((jets.jetId >> jetIDbit & 1)==1) &
+                        jetMuMask & jetEleMask & jetPhoMask
+        )
         
         #Add 30 GeV pt cut
-        jetSelect = jetSelectNoPt & ?
+        #jetSelect = jetSelectNoPt & ?
 
         # 1. ADD SELECTION
         #select the subset of jets passing the jetSelect cuts
-        tightJet = ?
+        tightJet = jets[jetSelectNoPt]
 
         # 1. ADD SELECTION
         # select the subset of tightJet which pass the Deep CSV tagger
         bTagWP = 0.6321   #2016 DeepCSV working point
         btagged = tightJet.btagDeepB>bTagWP  
-        bTaggedJet= ?
-        """
+        bTaggedJet= jets[btagged]
 
         #####################
         # EVENT SELECTION
         #####################
         ### PART 1B: Uncomment to add event selection
-        """
         # 1. ADD SELECTION
+
         ## apply triggers
         # muon events should be triggered by either the HLT_IsoMu24 or HLT_IsoTkMu24 triggers
         # electron events should be triggered by HLT_Ele27_WPTight_Gsf trigger
         # HINT: trigger values can be accessed with the variable events.HLT.TRIGGERNAME, 
         # the bitwise or operator can be used to select multiple triggers events.HLT.TRIGGER1 | events.HLT.TRIGGER2
-        muTrigger  = ?
-        eleTrigger = ?
+        #print(events.HLT.fields)
+        muTrigger  = events.HLT.IsoMu24 | events.HLT.IsoTkMu24
+        eleTrigger = events.HLT.Ele27_WPTight_Gsf
+
 
         # 1. ADD SELECTION
         #  Event selection
         #oneMuon, should be true if there is exactly one tight muon in the event 
         # (hint, the ak.num() method returns the number of objects in each row of a jagged array)
-        oneMuon = ?
+        oneMuon = (ak.num(tightMuon)==1)
         #muVeto, should be true if there are no tight muons in the event
-        muVeto  = ?
+        muVeto  = (ak.num(tightMuon)==0)
 
         # 1. ADD SELECTION
         #  Event selection
  
         #oneEle should be true if there is exactly one tight electron in the event
-        oneEle  = ?
+        oneEle  = (ak.num(tightElectron)==1)
 
         #eleVeto should be true if there are no tight electrons in the event
-        eleVeto = ?
+        #eleVeto = (ak.num(tightElecron)==0)
 
+        """
         # 1. ADD SELECTION
         #  Event selection
         #looseMuonVeto and looseElectronVeto should be true if there are 0 loose muons or electrons in the event

@@ -731,8 +731,8 @@ class TTGammaProcessor(processor.ProcessorABC):
         systList = []
         if self.isMC:
             if self.jetSyst == 'nominal':
-                #systList = ['nominal','muEffWeightUp','muEffWeightDown','eleEffWeightUp','eleEffWeightDown','ISRUp', 'ISRDown', 'FSRUp', 'FSRDown', 'PDFUp', 'PDFDown', 'Q2ScaleUp', 'Q2ScaleDown','puWeightUp','puWeightDown','btagWeightUp','btagWeightDown']
-                systList = ["nominal"]
+                systList = ['nominal','muEffWeightUp','muEffWeightDown','eleEffWeightUp','eleEffWeightDown','ISRUp', 'ISRDown', 'FSRUp', 'FSRDown', 'PDFUp', 'PDFDown', 'Q2ScaleUp', 'Q2ScaleDown','puWeightUp','puWeightDown','btagWeightUp','btagWeightDown']
+                #systList = ["nominal"]
             else:
                 systList=[self.jetSyst]
         else:
@@ -772,8 +772,6 @@ class TTGammaProcessor(processor.ProcessorABC):
                 #  ex: selection.all( *('LIST', 'OF', 'SELECTION', 'CUTS') )
                 phosel = selection.all(*(lepSel,'jetSel','onePho'))
                 phoselLoose = selection.all(*(lepSel,'jetSel','loosePho'))
-                #phosel = selection.all(*('jetSel','onePho'))
-                #phoselLoose = selection.all(*('jetSel','loosePho'))
 
                 # 3. FILL HISTOGRAMS
                 #    fill photon_pt and photon_eta, using the tightPhotons array, from events passing the phosel selection

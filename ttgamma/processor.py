@@ -423,14 +423,13 @@ class TTGammaProcessor(processor.ProcessorABC):
         oneEle  = (ak.num(tightElectron)==1)
 
         #eleVeto should be true if there are no tight electrons in the event
-        #eleVeto = (ak.num(tightElecron)==0)
+        eleVeto = (ak.num(tightElectron)==0)
 
-        """
         # 1. ADD SELECTION
         #  Event selection
         #looseMuonVeto and looseElectronVeto should be true if there are 0 loose muons or electrons in the event
-        looseMuonVeto = ?
-        looseElectronVeto = ?
+        looseMuonVeto = (ak.num(looseMuon)==0)
+        looseElectronVeto = (ak.num(looseElectron)==0)
 
         # 1. ADD SELECTION
         # muon selection, requires events to pass:   muon trigger
@@ -439,7 +438,14 @@ class TTGammaProcessor(processor.ProcessorABC):
         #                                            have no electrons
         #                                            have no loose muons
         #                                            have no loose electrons
-        muon_eventSelection = ?
+        muon_eventSelection = (
+            muTrigger & 
+            passOverlapRemoval & 
+            oneMuon &
+            eleVeto &
+            looseMuonVeto &
+            looseElectronVeto
+        )
 
         # electron selection, requires events to pass:   electron trigger
         #                                                overlap removal
@@ -447,7 +453,14 @@ class TTGammaProcessor(processor.ProcessorABC):
         #                                                have no muons
         #                                                have no loose muons
         #                                                have no loose electrons
-        electron_eventSelection = ?
+        electron_eventSelection = (
+            eleTrigger & 
+            passOverlapRemoval & 
+            oneEle &
+            muVeto &
+            looseMuonVeto &
+            looseElectronVeto
+        )
 
         # 1. ADD SELECTION
         #add selection 'eleSel', for events passing the electron event selection, and muSel for those passing the muon event selection
@@ -456,42 +469,40 @@ class TTGammaProcessor(processor.ProcessorABC):
         #create a selection object
         selection = PackedSelection()
 
-        selection.add('eleSel', ???)
-        selection.add('muSel', ???)
+        selection.add('eleSel', electron_eventSelection)
+        selection.add('muSel', muon_eventSelection)
 
         #add two jet selection criteria
         #   First, 'jetSel' which selects events with at least 4 tightJet and at least one bTaggedJet
         nJets = 4
-        selection.add('jetSel',      ???) 
+        selection.add('jetSel', ((ak.num(tightJet) >= nJets) & (ak.num(bTaggedJet) >= 1))) 
         #   Second, 'jetSel_3j0t' which selects events with at least 3 tightJet and exactly zero bTaggedJet
-        selection.add('jetSel_3j0t', ???) 
+        selection.add('jetSel_3j0t', ((ak.num(tightJet) >= 3) & (ak.num(bTaggedJet) == 0) ) ) 
 
         # add selection for events with exactly 0 tight photons
-        selection.add('zeroPho', ???)
+        selection.add('zeroPho', ak.num(tightPhoton) == 0 )
 
         # add selection for events with exactly 1 tight photon
-        selection.add('onePho',  ???)
+        selection.add('onePho', ak.num(tightPhoton) == 1)
 
         # add selection for events with exactly 1 loose photon
-        selection.add('loosePho',???)
-        """
+        selection.add('loosePho', ak.num(loosePhoton) == 1)
 
         ##################
         # EVENT VARIABLES
         ##################
 
         # PART 2A: Uncomment to begin implementing event variables
-        """
         # 2. DEFINE VARIABLES
         ## Define M3, mass of 3-jet pair with highest pT
         # find all possible combinations of 3 tight jets in the events 
         #hint: using the ak.combinations(array,n) method chooses n unique items from array. Use the "fields" option to define keys you can use to access the items
-        triJet=ak.combinations(???)
+        triJet=ak.combinations(tightJet,3,fields=["first","second","third"])
         #Sum together jets from the triJet object and find its pt and mass
-        triJetPt = (???).pt
-        triJetMass = (???).mass
+        triJetPt = (triJet.first + triJet.second + triJet.third).pt
+        triJetMass = (triJet.first + triJet.second + triJet.third).mass
         # define the M3 variable, the triJetMass of the combination with the highest triJetPt value (using the .argmax() method with axis=-1,keepdims=True)
-        M3 = triJetMass[???]
+        M3 = triJetMass[ak.argmax(triJetPt,axis=-1,keepdims=True)]
 
         leadingMuon = tightMuon[:,:1]
         leadingElectron = tightElectron[:,:1]
@@ -502,20 +513,19 @@ class TTGammaProcessor(processor.ProcessorABC):
         # 2. DEFINE VARIABLES
 
         # define egammaMass, mass of combinations of tightElectron and leadingPhoton (hint: using the ak.cartesian() method)
-        egammaPairs = ?
+        egammaPairs = ak.cartesian({"pho":leadingPhoton, "ele": tightElectron})
         # avoid erros when egammaPairs is empty
         if ak.all(ak.num(egammaPairs)==0):
             egammaMass = np.ones((len(events),1))*-1
         else:
-            egammaMass = ??
+            egammaMass = (egammaPairs.pho + egammaPairs.ele).mass
 
         # define mugammaMass, mass of combinations of tightMuon and leadingPhoton (hint: using the ak.cartesian() method) 
         mugammaPairs = ak.cartesian({"pho":leadingPhoton, "mu":tightMuon})
         if ak.all(ak.num(mugammaPairs)==0):
             mugammaMass = np.ones((len(events),1))*-1
         else:
-            mugammaMass = ??
-        """
+            mugammaMass = (mugammaPairs.pho + mugammaPairs.mu).mass
 
         ###################
         # PHOTON CATEGORIES
@@ -526,7 +536,6 @@ class TTGammaProcessor(processor.ProcessorABC):
         phoCategoryLoose = np.ones(len(events))
 
         # PART 2B: Uncomment to begin implementing photon categorization
-        """
         if self.isMC:
             #### Photon categories, using pdgID of the matched gen particle for the leading photon in the event
             # reco photons matched to a generated photon
@@ -540,13 +549,13 @@ class TTGammaProcessor(processor.ProcessorABC):
             # 2. DEFINE VARIABLES
             # define the photon categories for tight photon events
             # a genuine photon is a reconstructed photon which is matched to a generator level photon, and does not have a hadronic parent
-            isGenPho = ??
+            isGenPho = (matchedPho & ~hadronicParent)
             # a hadronic photon is a reconstructed photon which is matched to a generator level photon, but has a hadronic parent
-            isHadPho = ??
+            isHadPho = (matchedPho & hadronicParent)
             # a misidentified electron is a reconstructed photon which is matched to a generator level electron
-            isMisIDele = ??
+            isMisIDele = matchedEle
             # a hadronic/fake photon is a reconstructed photon that does not fall within any of the above categories and has at least one photon
-            isHadFake = ??  & (ak.num(leadingPhoton)==1)
+            isHadFake = ~(isGenPho | isHadPho | isMisIDele)  & (ak.num(leadingPhoton)==1)
 
             #define integer definition for the photon category axis 
             phoCategory = 1*isGenPho + 2*isMisIDele + 3*isHadPho + 4*isHadFake
@@ -559,10 +568,11 @@ class TTGammaProcessor(processor.ProcessorABC):
             # if the gen photon has a PDG ID > 25 in it's history, it has a hadronic parent
             hadronicParentLoose = ak.any(leadingPhotonLoose.matched_gen.maxParent>25, axis=-1)
 
+        """
             #####
             # 2. DEFINE VARIABLES
             # a genuine photon is a reconstructed photon which is matched to a generator level photon, and does not have a hadronic parent
-            isGenPhoLoose = ??
+            isGenPhoLoose = 
             # a hadronic photon is a reconstructed photon which is matched to a generator level photon, but has a hadronic parent
             isHadPhoLoose = ??
             # a misidentified electron is a reconstructed photon which is matched to a generator level electron

@@ -817,13 +817,13 @@ class TTGammaProcessor(processor.ProcessorABC):
             
             #Fill the photon_lepton_mass histogram for events passing phosel_3j0t_e and phosel_3j0t_mu
             output['photon_lepton_mass_3j0t'].fill(dataset=dataset,
-                                                   mass=ak.flatten(egammaMass[phosel_3j0t_e].mass),
+                                                   mass=ak.flatten(egammaMass[phosel_3j0t_e]),
                                                    category=phoCategory[phosel_3j0t_e],
                                                    lepFlavor='electron',
                                                    systematic=syst,
                                                    weight=evtWeight[phosel_3j0t_e])
             output['photon_lepton_mass_3j0t'].fill(dataset=dataset,
-                                                   mass=ak.flatten(mugammaMass[phosel_3j0t_mu].mass),
+                                                   mass=ak.flatten(mugammaMass[phosel_3j0t_mu]),
                                                    category=phoCategory[phosel_3j0t_mu],
                                                    lepFlavor='muon',
                                                    systematic=syst,

@@ -187,7 +187,7 @@ class TTGammaProcessor(processor.ProcessorABC):
             overlapEta = 2.6
             overlapDR = 0.05
 
-        print("doOverlapRemoval",doOverlapRemoval)
+        #print("doOverlapRemoval",doOverlapRemoval)
             
         if doOverlapRemoval:
             genmotherIdx = events.GenPart.genPartIdxMother
@@ -375,7 +375,7 @@ class TTGammaProcessor(processor.ProcessorABC):
         ##medium jet ID cut
         jetIDbit = 1
 
-        jetSelectNoPt = (
+        jetSelect = (
                         (jets.pt >= 30) &
                         (jets.eta < 2.4) &
                         ((jets.jetId >> jetIDbit & 1)==1) &
@@ -387,13 +387,13 @@ class TTGammaProcessor(processor.ProcessorABC):
 
         # 1. ADD SELECTION
         #select the subset of jets passing the jetSelect cuts
-        tightJet = jets[jetSelectNoPt]
+        tightJet = jets[jetSelect]
 
         # 1. ADD SELECTION
         # select the subset of tightJet which pass the Deep CSV tagger
         bTagWP = 0.6321   #2016 DeepCSV working point
         btagged = tightJet.btagDeepB>bTagWP  
-        bTaggedJet= jets[btagged]
+        bTaggedJet= tightJet[btagged]
 
         #####################
         # EVENT SELECTION
@@ -562,6 +562,7 @@ class TTGammaProcessor(processor.ProcessorABC):
 
             #define integer definition for the photon category axis 
             phoCategory = 1*isGenPho + 2*isMisIDele + 3*isHadPho + 4*isHadFake
+            #print("phoCategory:",phoCategory)
         
             # do photon matching for loose photons as well
             # reco photons matched to a generated photon 
@@ -793,7 +794,7 @@ class TTGammaProcessor(processor.ProcessorABC):
                 #    fill photon_chIso histogram, using the loosePhotons array (photons passing all cuts, except the charged hadron isolation cuts)
                 output['photon_chIso'].fill(dataset=dataset,
                                             chIso=ak.flatten(loosePhoton[phoselLoose].chIso),
-                                            category=phoCategory[phoselLoose],
+                                            category=phoCategoryLoose[phoselLoose],
                                             lepFlavor=lepton,
                                             systematic=syst,
                                             weight=evtWeight[phoselLoose])
@@ -816,13 +817,13 @@ class TTGammaProcessor(processor.ProcessorABC):
             
             #Fill the photon_lepton_mass histogram for events passing phosel_3j0t_e and phosel_3j0t_mu
             output['photon_lepton_mass_3j0t'].fill(dataset=dataset,
-                                                   mass=ak.flatten(tightPhoton[phosel_3j0t_e].mass),
+                                                   mass=ak.flatten(egammaMass[phosel_3j0t_e].mass),
                                                    category=phoCategory[phosel_3j0t_e],
                                                    lepFlavor='electron',
                                                    systematic=syst,
                                                    weight=evtWeight[phosel_3j0t_e])
             output['photon_lepton_mass_3j0t'].fill(dataset=dataset,
-                                                   mass=ak.flatten(tightPhoton[phosel_3j0t_mu].mass),
+                                                   mass=ak.flatten(mugammaMass[phosel_3j0t_mu].mass),
                                                    category=phoCategory[phosel_3j0t_mu],
                                                    lepFlavor='muon',
                                                    systematic=syst,
